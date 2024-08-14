@@ -7,8 +7,11 @@ __all__ = [
 ]
 
 
+from typing import Callable
 import random
 import string
+from functools import wraps
+from time import time
 
 from ._type_validation import validate_types_in_func_call
 
@@ -52,3 +55,40 @@ def random_str(n: int = 6,
         sample_space += string.digits
 
     return ''.join(random.choices(sample_space, k=n))
+
+
+def timeit(f: Callable) -> Callable:
+    """Decorator to get the execution time of a function.
+
+    Examples
+    --------
+    >>> import time
+    >>> @timeit
+    ... def hello(msg, sleep):
+    ...     print(msg)
+    ...     time.sleep(sleep)
+    >>> hello("Hello World", sleep=1)
+    Hello World.
+    hello('Hello World', sleep=1) : running time of 1.01 seconds
+
+    """
+
+    @wraps(f)
+    def wrap(*args, **kwargs):
+
+        t_start = time.time()
+        result = f(*args, **kwargs)
+        t_stop = time.time()
+
+        # string representation for args and kwargs
+        # Note:repr(x) is better than str(x) because represents string between quotes
+        args_lst = [repr(x) for x in args]
+        kwargs_lst = [f"{k}={repr(v)}" for k, v in kwargs.items()]
+        args_str = ", ".join(args_lst + kwargs_lst)
+
+        msg = (f"{f.__name__}({args_str}) : running time of"
+               f" {t_stop - t_start:.2f} seconds")
+        print(msg)
+
+        return result
+    return wrap
