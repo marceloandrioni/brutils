@@ -10,17 +10,19 @@ __all__ = [
     "datetime_or_similar_naive",
     "datetime_or_similar_aware",
     "datetime_or_similar_naive_or_utc",
+    "Path",
 ]
 
 
 from typing import Annotated, Any
 from pydantic import (validate_call, BeforeValidator, AfterValidator,
-                      TypeAdapter, ConfigDict)
+                      TypeAdapter, ConfigDict, Field)
 import numbers
 import datetime
 from itertools import accumulate
 import numpy as np
 import pandas as pd
+import pathlib   # calling pathlib.Path to define a Path Annotation
 
 
 # Note: pydantic is too lax with parsing, so always use strict=True
@@ -122,6 +124,7 @@ int_or_round_number = Annotated[
 ]
 int_or_round_number.__doc__ = (
     """Type alias to validate int or "round" numbers (float, decimal, etc).
+    If valid, the value is coerced to int.
 
     Examples
     --------
@@ -224,7 +227,9 @@ def parse_str(value: Any) -> Any:
             except Exception as err:
                 pass
 
-        raise ValueError(f"Could not find a valid format for the time string {value}")
+        fmts_str = "\n" + "\n".join(fmts) + "\n"
+        raise ValueError("Could not find a valid format for the string"
+                         f" '{value}'. Valid formats: {fmts_str}")
 
     return value
 
@@ -260,7 +265,8 @@ datetime_or_similar = Annotated[
     BeforeValidator(parse_str),
 ]
 datetime_or_similar.__doc__ = (
-    """Type alias to validate datetime, date, np.datetime64, pd.Timestamp, time str, etc.
+    """Type alias to validate datetime, date, np.datetime64, pd.Timestamp,
+    time str, etc. If valid, the value is coerced to datetime.datetime.
 
     Examples
     --------
@@ -355,3 +361,29 @@ datetime_or_similar_naive_or_utc.__doc__ = (
 
     """
 )
+
+# -----------------------------------------------------------------------------
+
+# set strict=False to allow coercion from string
+Path = Annotated[pathlib.Path, Field(strict=False)]
+Path.__doc__ = (
+    """Type alias to validate Path, str, etc. If valid, the value is coerced to
+    Path.
+
+    Examples
+    --------
+    >>> validate_type(Path("/tmp/foo/bar"), Path)
+    PosixPath('/tmp/foo/bar')
+
+    >>> validate_type("/tmp/foo/bar", Path)
+    PosixPath('/tmp/foo/bar')
+
+    """
+)
+
+# TODO: create some more path types, e.g.:
+# pydantic FilePath : must exist and be a file
+# pydantic DirectoryPath: must exist and be a directory
+# pydantic NewPath : must be new and parent exist (maybe turn off parent necessity)
+# Path_must_be_overwritable
+# check https://github.com/xfrenette/pathtype for ideas
